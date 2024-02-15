@@ -1,0 +1,6 @@
+mq:
+ server: 
+ client_id: 
+ client_secret: 
+ producer-queue: test-queue
+ consume-queue: test-queue

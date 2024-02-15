@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="5c6ccb89-c891-486a-a2eb-e80bd0cfa38c" file="env-${env}.yaml" />
+	<global-property doc:name="Global Property" doc:id="f71f77a8-ad38-4815-a450-1c211ae145c3" name="env" value="local" />
+	<anypoint-mq:config name="Anypoint_MQ_Config" doc:name="Anypoint MQ Config" doc:id="22c2424b-9537-416f-b2ad-22003fee7bd1" >
+		<anypoint-mq:connection url="${mq.server}" clientId="${mq.client_id}" clientSecret="${mq.client_secret}" />
+	</anypoint-mq:config>
+	<flow name="demo-mq-push-data" doc:id="5a4b1d52-3b88-426f-84a5-92dab3c24644" >
+		<scheduler doc:name="Scheduler" doc:id="f15029e5-cfb5-4fb8-92de-16b6f1475c31" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="2" startDelay="1" timeUnit="SECONDS" />
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="prepare-data" doc:id="4e986412-2056-4bca-8b51-041b9a0c4368" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json indent=false
+---
+{
+	"data": "test" ++ randomInt(1000) 
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="6df5b005-89d3-4454-8f99-57d9f46ff108" message="sent: #[payload]"/>
+		<anypoint-mq:publish doc:name="Publish" doc:id="210ea5ae-3910-4a92-847c-c83a092a80e9" config-ref="Anypoint_MQ_Config" destination="${mq.producer-queue}"/>
+	</flow>
+	<flow name="demo-mq-pull-data" doc:id="c5995871-8a69-4a34-9826-3cd3ebe79236" >
+		<anypoint-mq:subscriber doc:name="Subscriber" doc:id="0002a1b9-027c-43bb-8fde-c01ae33049b6" config-ref="Anypoint_MQ_Config" destination="${mq.consume-queue}"/>
+		<ee:transform doc:name="Transform Message" doc:id="6674b4ad-06fe-48ad-a398-0ac7f71fa325" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json indent=false
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="8148b0ca-aaa6-44de-9663-5ed58df18de7" message="received: #[payload]"/>
+	</flow>
+</mule>
